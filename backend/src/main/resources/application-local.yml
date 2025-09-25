@@ -1,0 +1,34 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:testdb
+    driverClassName: org.h2.Driver
+    username: sa
+    password: password
+  h2:
+    console:
+      enabled: true
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+
+# 使用本地文件存储而不是S3
+storage:
+  type: local
+  local-path: ./uploads
+
+# 禁用Redis（使用内存缓存）
+spring.redis:
+  host: localhost
+  port: 6379
+  enabled: false
+
+# 本地开发配置
+server:
+  port: 8080
+
+logging:
+  level:
+    com.resumeenhancer: INFO
+    org.springframework.security: DEBUG

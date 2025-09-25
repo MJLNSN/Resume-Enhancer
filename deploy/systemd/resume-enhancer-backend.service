@@ -1,0 +1,36 @@
+[Unit]
+Description=Resume Enhancer Backend Service
+After=network.target postgresql.service redis.service
+Wants=postgresql.service redis.service
+
+[Service]
+Type=simple
+User=ec2-user
+Group=ec2-user
+WorkingDirectory=/home/ec2-user/resume-enhancer
+ExecStart=/usr/bin/java -jar /home/ec2-user/resume-enhancer-backend.jar
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=always
+RestartSec=10
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=resume-enhancer-backend
+
+# Environment variables
+Environment=SPRING_PROFILES_ACTIVE=production
+EnvironmentFile=/home/ec2-user/resume-enhancer/.env
+
+# Security settings
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/home/ec2-user/resume-enhancer/logs
+
+# Resource limits
+LimitNOFILE=65536
+MemoryMax=1G
+CPUQuota=80%
+
+[Install]
+WantedBy=multi-user.target

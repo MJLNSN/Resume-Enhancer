@@ -1,0 +1,70 @@
+spring:
+  application:
+    name: resume-enhancer-backend
+  
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/resumeenhancer}
+    username: ${DB_USER:postgres}
+    password: ${DB_PASSWORD:password}
+    driver-class-name: org.postgresql.Driver
+  
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+  
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 5MB
+
+server:
+  port: ${BACKEND_PORT:8080}
+  servlet:
+    context-path: /api/v1
+
+app:
+  jwt:
+    secret: my-super-secure-jwt-secret-key-that-is-long-enough-for-hs512-algorithm-minimum-512-bits-required-for-security-and-compliance-with-rfc7518-section-3-2
+    expiration: ${JWT_EXPIRATION_HOURS:24}
+  
+  storage:
+    type: local
+    local-path: ./uploads
+  
+  nlp:
+    service:
+      base-url: http://localhost:${NLP_SERVICE_PORT:8000}
+  
+  openai:
+    api-base: https://api.chatanywhere.org/v1
+    api-key: sk-culzAxTddIqcn7IiU4vGUgbraDG5re4UHqEnYu22aD7VVm4j
+  
+  redis:
+    host: ${REDIS_HOST:localhost}
+    port: ${REDIS_PORT:6379}
+    password: ${REDIS_PASSWORD:}
+    timeout: 2000ms
+    lettuce:
+      pool:
+        max-active: 8
+        max-idle: 8
+        min-idle: 0
+  
+  cache:
+    enable-redis: ${ENABLE_REDIS_CACHE:false}
+    gpt-cache-hours: ${GPT_CACHE_HOURS:24}
+  
+  usage:
+    daily-gpt-limit: ${DAILY_GPT_LIMIT:10}
+    daily-enhancement-limit: ${DAILY_ENHANCEMENT_LIMIT:20}
+    enable-redis-cache: ${ENABLE_REDIS_CACHE:false}
+
+logging:
+  level:
+    com.resumeenhancer: INFO
+    org.springframework.security: DEBUG
