@@ -56,7 +56,7 @@ jobs:
       - name: Run tests and build
         run: |
           cd frontend
-          npm run test -- --run
+          npm run test
           npm run build
 
   nlp-test:
