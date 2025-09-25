@@ -8,6 +8,9 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.time.temporal.ChronoUnit;
 
 @RestController
 @RequestMapping("/usage")
@@ -24,19 +27,32 @@ public class UsageController {
             return ResponseEntity.ok(Map.of(
                 "gptRemaining", -1,
                 "enhancementRemaining", -1,
-                "unlimited", true
+                "unlimited", true,
+                "resetTimeUTC", "",
+                "hoursUntilReset", 0
             ));
         }
 
         int gptRemaining = usageTrackingService.getRemainingGptUsage(currentUser.getId());
         int enhancementRemaining = usageTrackingService.getRemainingEnhancementUsage(currentUser.getId());
+        
+        // Calculate time until midnight UTC (when limits reset)
+        LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
+        LocalDateTime nextMidnight = now.plusDays(1).withHour(0).withMinute(0).withSecond(0).withNano(0);
+        long hoursUntilReset = ChronoUnit.HOURS.between(now, nextMidnight);
+        long minutesUntilReset = ChronoUnit.MINUTES.between(now, nextMidnight) % 60;
+        
+        String resetTimeFormatted = String.format("%02d:%02d", hoursUntilReset, minutesUntilReset);
 
         return ResponseEntity.ok(Map.of(
             "gptRemaining", gptRemaining,
             "enhancementRemaining", enhancementRemaining,
             "unlimited", false,
             "canUseGpt", usageTrackingService.canUseGptService(currentUser.getId()),
-            "canUseEnhancement", usageTrackingService.canUseEnhancement(currentUser.getId())
+            "canUseEnhancement", usageTrackingService.canUseEnhancement(currentUser.getId()),
+            "resetTimeUTC", nextMidnight.toString(),
+            "hoursUntilReset", hoursUntilReset,
+            "resetTimeFormatted", resetTimeFormatted
         ));
     }
 

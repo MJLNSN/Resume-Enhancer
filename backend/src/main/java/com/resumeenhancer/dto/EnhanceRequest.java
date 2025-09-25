@@ -8,14 +8,17 @@ public class EnhanceRequest {
     
     private String jobDescription;
     
+    private String outputLanguage; // Target output language
+    
     @NotNull
     private String mode; // "gpt" or "local"
 
     public EnhanceRequest() {}
 
-    public EnhanceRequest(Long resumeId, String jobDescription, String mode) {
+    public EnhanceRequest(Long resumeId, String jobDescription, String outputLanguage, String mode) {
         this.resumeId = resumeId;
         this.jobDescription = jobDescription;
+        this.outputLanguage = outputLanguage;
         this.mode = mode;
     }
 
@@ -25,6 +28,9 @@ public class EnhanceRequest {
 
     public String getJobDescription() { return jobDescription; }
     public void setJobDescription(String jobDescription) { this.jobDescription = jobDescription; }
+
+    public String getOutputLanguage() { return outputLanguage; }
+    public void setOutputLanguage(String outputLanguage) { this.outputLanguage = outputLanguage; }
 
     public String getMode() { return mode; }
     public void setMode(String mode) { this.mode = mode; }

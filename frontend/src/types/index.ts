@@ -57,6 +57,7 @@ export interface EnhancedResume {
 export interface AnalyzeRequest {
   resumeId: number;
   jobDescription?: string;
+  outputLanguage?: string;
   mode: 'local' | 'gpt';
   forceRefresh?: boolean;
 }
@@ -64,7 +65,7 @@ export interface AnalyzeRequest {
 export interface TranslateRequest {
   resumeId?: number;
   text?: string;
-  targetLang: 'en' | 'zh';
+  targetLang: string; // Support all language codes
   mode: 'gpt' | 'local';
 }
 

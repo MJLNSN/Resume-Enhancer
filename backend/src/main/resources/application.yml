@@ -10,7 +10,7 @@ spring:
   
   jpa:
     hibernate:
-      ddl-auto: create-drop
+      ddl-auto: update
     show-sql: true
     properties:
       hibernate:
@@ -62,7 +62,7 @@ app:
   usage:
     daily-gpt-limit: ${DAILY_GPT_LIMIT:10}
     daily-enhancement-limit: ${DAILY_ENHANCEMENT_LIMIT:20}
-    enable-redis-cache: ${ENABLE_REDIS_CACHE:false}
+    enable-redis-cache: ${ENABLE_REDIS_CACHE:true}
 
 logging:
   level:

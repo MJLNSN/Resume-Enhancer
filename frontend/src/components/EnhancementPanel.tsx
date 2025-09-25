@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Wand2, Brain, Globe, Loader, AlertCircle } from 'lucide-react';
+import { useState } from 'react';
+import { Wand2, Brain, Loader, AlertCircle } from 'lucide-react';
 import { apiService } from '../services/api';
 import { EnhancedResumeResponse } from '../types';
 
@@ -12,150 +12,168 @@ export function EnhancementPanel({ resumeId, onEnhancementComplete }: Enhancemen
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [jobDescription, setJobDescription] = useState('');
-  const [mode, setMode] = useState<'local' | 'gpt'>('local');
+  const [mode] = useState<'local' | 'gpt'>('gpt'); // Always use GPT mode
+  const [outputLanguage, setOutputLanguage] = useState('en');
 
   const handleEnhance = async () => {
     setLoading(true);
     setError(null);
 
     try {
-      const result = await apiService.analyzeResume({
+      const result = await apiService.enhanceResume({
         resumeId,
         jobDescription: jobDescription.trim() || undefined,
+        outputLanguage: outputLanguage,
         mode,
-        forceRefresh: true,
       });
       
       onEnhancementComplete(result);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to enhance resume');
+      setError(err.response?.data?.error || err.response?.data?.message || 'Failed to enhance resume');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleTranslate = async (targetLang: 'en' | 'zh') => {
+
+  const languageOptions = [
+    { code: 'en', name: 'English', flag: '🇺🇸' },
+    { code: 'zh', name: '中文', flag: '🇨🇳' },
+    { code: 'es', name: 'Español', flag: '🇪🇸' },
+    { code: 'fr', name: 'Français', flag: '🇫🇷' },
+    { code: 'de', name: 'Deutsch', flag: '🇩🇪' },
+    { code: 'ja', name: '日本語', flag: '🇯🇵' },
+    { code: 'ko', name: '한국어', flag: '🇰🇷' },
+  ];
+
+  const handleGenerateSuggestions = async () => {
     setLoading(true);
     setError(null);
 
     try {
-      const result = await apiService.translateResume({
+      const result = await apiService.generateSuggestions({
         resumeId,
-        targetLang,
-        mode: 'gpt',
+        jobDescription: jobDescription.trim() || undefined,
+        mode,
       });
       
-      onEnhancementComplete(result);
+      // Create a temporary response with suggestions
+      const suggestionsResponse = {
+        id: Date.now(), // temporary ID
+        resumeId,
+        enhancedText: `# Improvement Suggestions\n\n${result.suggestions.map((s, i) => `${i + 1}. ${s}`).join('\n\n')}`,
+        language: 'ORIGINAL' as const,
+        suggestions: result.suggestions,
+        enhancementType: 'suggest' as const,
+        createdAt: new Date().toISOString(),
+      };
+      
+      onEnhancementComplete(suggestionsResponse);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to translate resume');
+      setError(err.response?.data?.error || err.response?.data?.message || 'Failed to generate suggestions');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-      <h3 className="text-lg font-medium text-gray-900 mb-4">
-        AI Enhancement
-      </h3>
+    <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-200/50 p-8">
+      <div className="flex items-center space-x-3 mb-6">
+        <div className="w-10 h-10 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center">
+          <Wand2 className="h-5 w-5 text-white" />
+        </div>
+        <h3 className="text-xl font-semibold text-gray-900">
+          AI Enhancement
+        </h3>
+      </div>
 
       {error && (
-        <div className="mb-4 flex items-center space-x-2 text-red-600 text-sm">
-          <AlertCircle className="h-4 w-4" />
-          <span>{error}</span>
+        <div className="mb-6 flex items-center space-x-3 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700">
+          <AlertCircle className="h-5 w-5 flex-shrink-0" />
+          <span className="text-sm">{error}</span>
         </div>
       )}
 
-      <div className="space-y-4">
+      <div className="space-y-6">
         {/* Job Description Input */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Target Job Description (Optional)
+            Target Job Description (Recommended)
           </label>
           <textarea
             value={jobDescription}
             onChange={(e) => setJobDescription(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-            rows={3}
-            placeholder="Paste the job description here to tailor the enhancement..."
+            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors resize-none"
+            rows={4}
+            placeholder="Paste the target job description here. AI will tailor your resume to highlight relevant skills, experiences, and keywords that match the position requirements..."
             disabled={loading}
           />
+          <p className="text-xs text-gray-500 mt-1">
+            💡 Adding a job description significantly improves resume targeting and keyword optimization
+          </p>
         </div>
 
-        {/* Mode Selection */}
+
+        {/* Output Language Selection */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Enhancement Mode
+            Output Language
           </label>
-          <div className="flex space-x-3">
-            <label className="flex items-center">
-              <input
-                type="radio"
-                value="local"
-                checked={mode === 'local'}
-                onChange={(e) => setMode(e.target.value as 'local' | 'gpt')}
-                className="mr-2"
-                disabled={loading}
-              />
-              <span className="text-sm text-gray-700">Local Template</span>
-            </label>
-            <label className="flex items-center">
-              <input
-                type="radio"
-                value="gpt"
-                checked={mode === 'gpt'}
-                onChange={(e) => setMode(e.target.value as 'local' | 'gpt')}
-                className="mr-2"
-                disabled={loading}
-              />
-              <span className="text-sm text-gray-700">GPT Powered</span>
-            </label>
-          </div>
+          <select
+            value={outputLanguage}
+            onChange={(e) => setOutputLanguage(e.target.value)}
+            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors"
+            disabled={loading}
+          >
+            {languageOptions.map((lang) => (
+              <option key={lang.code} value={lang.code}>
+                {lang.flag} {lang.name}
+              </option>
+            ))}
+          </select>
           <p className="text-xs text-gray-500 mt-1">
-            GPT mode requires OpenAI API key configuration
+            The enhanced resume will be formatted in the selected language
           </p>
         </div>
 
         {/* Action Buttons */}
-        <div className="flex flex-wrap gap-3">
+        <div className="flex flex-wrap gap-4">
           <button
             onClick={handleEnhance}
             disabled={loading}
-            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="inline-flex items-center px-6 py-3 border border-transparent text-sm font-semibold rounded-xl text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg hover:shadow-xl"
           >
             {loading ? (
               <Loader className="h-4 w-4 mr-2 animate-spin" />
             ) : (
               <Wand2 className="h-4 w-4 mr-2" />
             )}
-            Enhance Resume
+            Format & Enhance
           </button>
 
           <button
-            onClick={() => handleTranslate('en')}
+            onClick={handleGenerateSuggestions}
             disabled={loading}
-            className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="inline-flex items-center px-6 py-3 border border-gray-300 text-sm font-semibold rounded-xl text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-sm hover:shadow-md"
           >
-            <Globe className="h-4 w-4 mr-2" />
-            Translate to English
+            {loading ? (
+              <Loader className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Brain className="h-4 w-4 mr-2" />
+            )}
+            Get Suggestions
           </button>
 
-          <button
-            onClick={() => handleTranslate('zh')}
-            disabled={loading}
-            className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Globe className="h-4 w-4 mr-2" />
-            翻译成中文
-          </button>
         </div>
 
-        {mode === 'gpt' && (
-          <div className="text-xs text-amber-600 bg-amber-50 p-3 rounded-md">
-            <strong>Note:</strong> GPT features require an OpenAI API key. 
-            If not configured, local template will be used as fallback.
+        <div className="text-sm text-blue-700 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 p-4 rounded-xl">
+          <div className="flex items-center space-x-2">
+            <div className="w-5 h-5 bg-blue-100 rounded-full flex items-center justify-center">
+              <span className="text-blue-600 text-xs font-bold">✨</span>
+            </div>
+            <span className="font-medium">All enhancements are powered by GPT for the best results.</span>
           </div>
-        )}
+        </div>
       </div>
     </div>
   );

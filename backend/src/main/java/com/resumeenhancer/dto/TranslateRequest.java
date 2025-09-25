@@ -9,7 +9,7 @@ public class TranslateRequest {
     private String text;
     
     @NotNull
-    @Pattern(regexp = "en|zh", message = "Target language must be 'en' or 'zh'")
+    @Pattern(regexp = "en|zh|es|fr|de|ja|ko", message = "Target language must be one of: en, zh, es, fr, de, ja, ko")
     private String targetLang;
     
     @NotNull

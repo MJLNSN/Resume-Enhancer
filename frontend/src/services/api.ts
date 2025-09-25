@@ -53,15 +53,22 @@ class ApiService {
 
   // Resumes
   async uploadResume(file: File): Promise<Resume> {
+    console.log('API: Uploading file:', file.name);
     const formData = new FormData();
     formData.append('file', file);
     
-    const response = await this.api.post('/resumes/upload', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
-    return response.data;
+    try {
+      const response = await this.api.post('/resumes/upload', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      console.log('API: Upload response:', response.data);
+      return response.data;
+    } catch (error: any) {
+      console.error('API: Upload error:', error.response?.status, error.response?.data);
+      throw error;
+    }
   }
 
   async getResume(id: number): Promise<Resume> {
@@ -74,9 +81,26 @@ class ApiService {
     return response.data;
   }
 
+  async createTextResume(data: { text: string }): Promise<Resume> {
+    const response = await this.api.post('/resumes/text', data);
+    return response.data;
+  }
+
   // Analysis
   async analyzeResume(data: AnalyzeRequest): Promise<EnhancedResumeResponse> {
     const response = await this.api.post('/analyze', data);
+    return response.data;
+  }
+
+  // Enhancement
+  async enhanceResume(data: { resumeId: number; jobDescription?: string; outputLanguage?: string; mode: 'local' | 'gpt' }): Promise<EnhancedResumeResponse> {
+    const response = await this.api.post('/enhance', data);
+    return response.data;
+  }
+
+  // Suggestions
+  async generateSuggestions(data: { resumeId: number; jobDescription?: string; mode: 'local' | 'gpt' }): Promise<{ suggestions: string[] }> {
+    const response = await this.api.post('/suggestions', data);
     return response.data;
   }
 
@@ -110,12 +134,20 @@ class ApiService {
     return response.data;
   }
 
+  async exportHtmlDirect(enhancedResumeId: number): Promise<Blob> {
+    const response = await this.api.get(`/export/html/${enhancedResumeId}`, {
+      responseType: 'blob'
+    });
+    return response.data;
+  }
+
   async exportComparison(enhancedResumeId: number): Promise<Blob> {
     const response = await this.api.get(`/export/compare/${enhancedResumeId}`, {
       responseType: 'blob'
     });
     return response.data;
   }
+
 
   // Usage tracking
   async getUsageLimits(): Promise<any> {

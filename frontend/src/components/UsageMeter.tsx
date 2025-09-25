@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Zap, Brain, AlertTriangle } from 'lucide-react';
 import { apiService } from '../services/api';
 
@@ -8,6 +8,8 @@ interface UsageLimits {
   unlimited: boolean;
   canUseGpt: boolean;
   canUseEnhancement: boolean;
+  resetTimeFormatted?: string;
+  hoursUntilReset?: number;
 }
 
 export function UsageMeter() {
@@ -54,12 +56,14 @@ export function UsageMeter() {
 
   if (!usage || usage.unlimited) {
     return (
-      <div className="bg-green-50 rounded-lg border border-green-200 p-4">
-        <div className="flex items-center space-x-2 text-green-700">
-          <Zap className="h-4 w-4" />
-          <span className="text-sm font-medium">Unlimited Usage</span>
+      <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border border-green-200/50 p-6 shadow-sm">
+        <div className="flex items-center space-x-3 text-green-700">
+          <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+            <Zap className="h-4 w-4" />
+          </div>
+          <span className="font-semibold">Unlimited Usage</span>
         </div>
-        <p className="text-xs text-green-600 mt-1">
+        <p className="text-sm text-green-600 mt-2">
           No daily limits configured
         </p>
       </div>
@@ -67,11 +71,13 @@ export function UsageMeter() {
   }
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-4 space-y-4">
-      <h3 className="text-sm font-medium text-gray-900 flex items-center space-x-2">
-        <Brain className="h-4 w-4" />
-        <span>Daily Usage</span>
-      </h3>
+    <div className="bg-white/70 backdrop-blur-sm rounded-xl border border-gray-200/50 p-6 space-y-6 shadow-sm">
+      <div className="flex items-center space-x-3">
+        <div className="w-8 h-8 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center">
+          <Brain className="h-4 w-4 text-white" />
+        </div>
+        <h3 className="font-semibold text-gray-900">Daily Usage</h3>
+      </div>
 
       {/* GPT Usage */}
       <div>
@@ -81,9 +87,9 @@ export function UsageMeter() {
             {usage.gptRemaining} remaining
           </span>
         </div>
-        <div className="w-full bg-gray-200 rounded-full h-2">
+        <div className="w-full bg-gray-200 rounded-full h-3">
           <div
-            className={`h-2 rounded-full transition-all duration-300 ${getProgressColor(usage.gptRemaining, 50)}`}
+            className={`h-3 rounded-full transition-all duration-500 ${getProgressColor(usage.gptRemaining, 50)} shadow-sm`}
             style={{
               width: `${Math.max(0, Math.min(100, (usage.gptRemaining / 50) * 100))}%`
             }}
@@ -105,9 +111,9 @@ export function UsageMeter() {
             {usage.enhancementRemaining} remaining
           </span>
         </div>
-        <div className="w-full bg-gray-200 rounded-full h-2">
+        <div className="w-full bg-gray-200 rounded-full h-3">
           <div
-            className={`h-2 rounded-full transition-all duration-300 ${getProgressColor(usage.enhancementRemaining, 100)}`}
+            className={`h-3 rounded-full transition-all duration-500 ${getProgressColor(usage.enhancementRemaining, 100)} shadow-sm`}
             style={{
               width: `${Math.max(0, Math.min(100, (usage.enhancementRemaining / 100) * 100))}%`
             }}
@@ -121,8 +127,15 @@ export function UsageMeter() {
         )}
       </div>
 
-      <div className="text-xs text-gray-500 border-t pt-2">
-        Limits reset daily at midnight UTC
+      <div className="text-xs text-gray-500 border-t border-gray-200/50 pt-4">
+        {usage.resetTimeFormatted ? (
+          <div className="bg-gray-50 rounded-lg p-3">
+            <div className="font-medium text-gray-700">Limits reset in: <span className="text-indigo-600">{usage.resetTimeFormatted}</span></div>
+            <div className="text-gray-500 mt-1">Daily at midnight UTC</div>
+          </div>
+        ) : (
+          <div className="text-center">Limits reset daily at midnight UTC</div>
+        )}
       </div>
     </div>
   );

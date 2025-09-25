@@ -96,6 +96,32 @@ public class ExportController {
         }
     }
 
+    @GetMapping("/html/{enhancedResumeId}")
+    public ResponseEntity<String> exportHtmlDirect(
+            @PathVariable Long enhancedResumeId,
+            @AuthenticationPrincipal UserPrincipal currentUser) {
+        try {
+            EnhancedResume enhanced = enhancedResumeRepository.findByIdAndResumeUserId(
+                    enhancedResumeId, currentUser.getId())
+                    .orElseThrow(() -> new RuntimeException("Enhanced resume not found"));
+
+            String html = exportService.convertMarkdownToHtml(enhanced.getEnhancedText());
+            String filename = exportService.generateUniqueFilename("resume", currentUser.getId());
+
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, 
+                            "attachment; filename=\"" + filename + ".html\"")
+                    .contentType(MediaType.TEXT_HTML)
+                    .body(html);
+
+        } catch (Exception e) {
+            System.err.println("HTML export error: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.badRequest()
+                .body("Failed to export HTML: " + e.getMessage());
+        }
+    }
+
     @GetMapping("/compare/{enhancedResumeId}")
     public ResponseEntity<String> exportComparison(
             @PathVariable Long enhancedResumeId,

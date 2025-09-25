@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Layout } from '../components/Layout';
 import { EnhancementPanel } from '../components/EnhancementPanel';
 import { EnhancedVersionCard } from '../components/EnhancedVersionCard';
 import { Resume, EnhancedResumeResponse } from '../types';
 import { apiService } from '../services/api';
-import { ArrowLeft, Loader, AlertCircle, CheckCircle, Clock, Sparkles } from 'lucide-react';
+import { ArrowLeft, Loader, AlertCircle, CheckCircle, Clock, Sparkles, Download } from 'lucide-react';
 
 interface ResumeDetailPageProps {
   resumeId: number;
@@ -64,6 +64,45 @@ export function ResumeDetailPage({ resumeId, onBack }: ResumeDetailPageProps) {
   const handleVersionSelect = (version: EnhancedResumeResponse) => {
     setSelectedVersion(version);
   };
+
+  const handleDownloadMarkdown = async () => {
+    if (!selectedVersion) return;
+    
+    try {
+      const blob = await apiService.exportMarkdownDirect(selectedVersion.id);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url;
+      a.download = `resume_${selectedVersion.id}.md`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error('Failed to download markdown:', error);
+    }
+  };
+
+  const handleDownloadHtml = async () => {
+    if (!selectedVersion) return;
+    
+    try {
+      const blob = await apiService.exportHtmlDirect(selectedVersion.id);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url;
+      a.download = `resume_${selectedVersion.id}.html`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error('Failed to download HTML:', error);
+    }
+  };
+
 
   const getProcessingStatus = () => {
     if (!resume) return { icon: <Clock className="h-5 w-5" />, text: 'Loading...', color: 'text-yellow-500' };
@@ -138,7 +177,7 @@ export function ResumeDetailPage({ resumeId, onBack }: ResumeDetailPageProps) {
             {resume?.parsedJson && (
               <button
                 onClick={() => setShowEnhancementPanel(!showEnhancementPanel)}
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
+                className="inline-flex items-center px-6 py-3 border border-transparent text-sm font-semibold rounded-xl text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl"
               >
                 <Sparkles className="h-4 w-4 mr-2" />
                 {showEnhancementPanel ? 'Hide Enhancement' : 'Enhance Resume'}
@@ -152,17 +191,17 @@ export function ResumeDetailPage({ resumeId, onBack }: ResumeDetailPageProps) {
           </div>
         </div>
 
-        <div className="bg-white shadow rounded-lg">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h1 className="text-lg font-medium text-gray-900">
+        <div className="bg-white/70 backdrop-blur-sm shadow-xl rounded-2xl border border-gray-200/50">
+          <div className="px-8 py-6 border-b border-gray-200/50">
+            <h1 className="text-2xl font-bold text-gray-900">
               Resume #{resume?.id}
             </h1>
-            <p className="mt-1 text-sm text-gray-500">
+            <p className="mt-2 text-gray-600">
               Uploaded {resume && new Date(resume.createdAt).toLocaleDateString()}
             </p>
           </div>
 
-          <div className="p-6 space-y-8">
+          <div className="p-8 space-y-10">
             {/* Enhancement Panel */}
             {showEnhancementPanel && resume?.parsedJson && (
               <EnhancementPanel
@@ -192,9 +231,27 @@ export function ResumeDetailPage({ resumeId, onBack }: ResumeDetailPageProps) {
             {/* Selected Enhanced Version */}
             {selectedVersion && (
               <div>
-                <h3 className="text-lg font-medium text-gray-900 mb-4">
-                  Enhanced Content - {selectedVersion.enhancementType} ({selectedVersion.language})
-                </h3>
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-lg font-medium text-gray-900">
+                    Enhanced Content - {selectedVersion.enhancementType} ({selectedVersion.language})
+                  </h3>
+                  <div className="flex space-x-3">
+                    <button
+                      onClick={handleDownloadMarkdown}
+                      className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors"
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      Download MD
+                    </button>
+                    <button
+                      onClick={handleDownloadHtml}
+                      className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors"
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      Download HTML
+                    </button>
+                  </div>
+                </div>
                 <div className="bg-gray-50 rounded-lg p-6">
                   <div className="prose max-w-none">
                     <pre className="text-sm text-gray-700 whitespace-pre-wrap font-mono">

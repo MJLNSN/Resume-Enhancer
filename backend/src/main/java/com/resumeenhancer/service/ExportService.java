@@ -46,6 +46,11 @@ public class ExportService {
     }
 
     public String exportToPdfUrl(String enhancedText, String filename) throws IOException {
+        byte[] pdfBytes = exportToPdfBytes(enhancedText);
+        return uploadPdfToStorage(pdfBytes, filename + ".pdf");
+    }
+
+    public byte[] exportToPdfBytes(String enhancedText) throws IOException {
         // Convert Markdown to HTML
         Node document = parser.parse(enhancedText);
         String html = renderer.render(document);
@@ -54,11 +59,16 @@ public class ExportService {
         String fullHtml = createStyledHtml(html);
         
         // Convert HTML to PDF
-        byte[] pdfBytes = convertHtmlToPdf(fullHtml);
+        return convertHtmlToPdf(fullHtml);
+    }
+
+    public String convertMarkdownToHtml(String markdownText) {
+        // Convert Markdown to HTML
+        Node document = parser.parse(markdownText);
+        String html = renderer.render(document);
         
-        // Upload to S3 and return URL
-        String s3Key = "exports/" + filename + ".pdf";
-        return uploadPdfToStorage(pdfBytes, s3Key);
+        // Create full HTML document with styling
+        return createStyledHtml(html);
     }
 
     private String createStyledHtml(String content) {
@@ -100,8 +110,9 @@ public class ExportService {
         }
     }
 
-    private String uploadPdfToStorage(byte[] pdfBytes, String s3Key) throws IOException {
-        return storageService.uploadBytes(pdfBytes, s3Key, "application/pdf");
+    private String uploadPdfToStorage(byte[] pdfBytes, String fileName) throws IOException {
+        String storedPath = storageService.uploadBytes(pdfBytes, fileName, "exports");
+        return storageService.getFileUrl(storedPath);
     }
 
     public String generateUniqueFilename(String prefix, Long userId) {

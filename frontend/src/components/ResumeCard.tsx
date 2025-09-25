@@ -1,4 +1,3 @@
-import React from 'react';
 import { FileText, Calendar, AlertTriangle, CheckCircle, Clock } from 'lucide-react';
 import { Resume } from '../types';
 

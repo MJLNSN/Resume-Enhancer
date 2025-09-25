@@ -49,13 +49,19 @@ public class GptService {
     }
 
     public String enhanceResume(String resumeText, String jobDescription) {
+        return enhanceResume(resumeText, jobDescription, null);
+    }
+
+    public String enhanceResume(String resumeText, String jobDescription, String outputLanguage) {
         System.out.println("=== GPT ENHANCE DEBUG ===");
         System.out.println("Input text: " + resumeText.substring(0, Math.min(100, resumeText.length())) + "...");
         System.out.println("Job description: " + (jobDescription != null ? jobDescription : "null"));
+        System.out.println("Output language: " + (outputLanguage != null ? outputLanguage : "original"));
         
-        String prompt = buildEnhancePrompt(resumeText, jobDescription);
+        String prompt = buildEnhancePrompt(resumeText, jobDescription, outputLanguage);
         System.out.println("Generated prompt length: " + prompt.length());
-        System.out.println("Prompt preview: " + prompt.substring(0, Math.min(300, prompt.length())) + "...");
+        System.out.println("Language instruction included: " + (prompt.contains("CRITICAL LANGUAGE REQUIREMENTS")));
+        System.out.println("Prompt preview: " + prompt.substring(0, Math.min(500, prompt.length())) + "...");
         
         // Check cache first
         if (cacheService != null) {
@@ -216,21 +222,49 @@ public class GptService {
     }
 
     private String buildEnhancePrompt(String resumeText, String jobDescription) {
+        return buildEnhancePrompt(resumeText, jobDescription, null);
+    }
+
+    private String buildEnhancePrompt(String resumeText, String jobDescription, String outputLanguage) {
         String template = getResumeTemplate();
+        String jobFocus = jobDescription != null && !jobDescription.trim().isEmpty() ? jobDescription : "General professional improvement";
+        String languageInstruction = "";
+        
+        if (outputLanguage != null && !outputLanguage.trim().isEmpty() && !"en".equals(outputLanguage.toLowerCase())) {
+            String targetLangFull = getLanguageName(outputLanguage);
+            languageInstruction = String.format(
+                "\n\nCRITICAL LANGUAGE REQUIREMENTS - THIS IS MANDATORY:\n" +
+                "- MUST write the ENTIRE resume in %s language ONLY\n" +
+                "- ALL section headers, job titles, descriptions must be in %s\n" +
+                "- Use professional %s terminology and natural expressions\n" +
+                "- Translate ALL text content to %s while maintaining template structure\n" +
+                "- Keep dates, phone numbers, and email addresses unchanged\n" +
+                "- Company names can remain in original language or be translated as appropriate\n" +
+                "- The output must be 100%% in %s language - no English text allowed",
+                targetLangFull, targetLangFull, targetLangFull, targetLangFull, targetLangFull);
+        }
+        
         return String.format(
-            "You are an expert career coach. Transform the following resume to match this EXACT template format:\n\n" +
+            "You are an expert career coach and resume writer.%s\n\nTransform the following resume to match the EXACT template format while tailoring it for the target position:\n\n" +
             "TEMPLATE FORMAT:\n%s\n\n" +
             "CURRENT RESUME:\n%s\n\n" +
-            "JOB FOCUS: %s\n\n" +
-            "INSTRUCTIONS:\n" +
+            "TARGET JOB DESCRIPTION:\n%s\n\n" +
+            "ENHANCEMENT INSTRUCTIONS:\n" +
             "1. Restructure the resume to EXACTLY match the template format\n" +
             "2. Replace template placeholders with actual information from the current resume\n" +
-            "3. Preserve all factual information (names, dates, companies, metrics)\n" +
-            "4. Enhance descriptions to be more professional and results-oriented\n" +
-            "5. If sections are missing, create appropriate content based on available information\n" +
-            "6. Output ONLY the enhanced resume in the exact template format\n" +
-            "7. Do not include any explanations or additional text",
-            template, resumeText, jobDescription != null ? jobDescription : "General improvement");
+            "3. Preserve all factual information (names, dates, companies, exact metrics)\n" +
+            "4. TAILOR the content to align with the target job requirements:\n" +
+            "   - Highlight relevant skills mentioned in the job description\n" +
+            "   - Emphasize experiences that match the job requirements\n" +
+            "   - Use keywords and terminology from the job posting\n" +
+            "   - Reorder skills to prioritize those most relevant to the position\n" +
+            "5. Enhance bullet points to be results-oriented and quantified when possible\n" +
+            "6. Adjust the professional summary/objective to align with the target role\n" +
+            "7. If missing relevant skills/experience, suggest how existing experience translates\n" +
+            "8. Output ONLY the enhanced resume in the exact template format\n" +
+            "9. Do not include any explanations, notes, or additional text\n\n" +
+            "Focus on making this resume compelling for the specific target position while maintaining complete accuracy.",
+            languageInstruction, template, resumeText, jobFocus);
     }
     
     private String getResumeTemplate() {
@@ -268,28 +302,60 @@ public class GptService {
     private String buildSuggestionsPrompt(Object parsedJson, String jobDescription) {
         try {
             String resumeJsonStr = objectMapper.writeValueAsString(parsedJson);
+            String jobFocus = jobDescription != null && !jobDescription.trim().isEmpty() ? jobDescription : "General career advancement";
+            
             return String.format(
-                "Given resume: %s and job: %s, suggest 3-5 practical ways the candidate can improve competitiveness. " +
-                "Return ONLY JSON: {'suggestions': ['...','...']} " +
-                "Focus on actionable improvements like: " +
-                "- Specific skills to learn or certify " +
-                "- Project ideas to strengthen portfolio " +
-                "- Ways to quantify achievements " +
-                "- Industry-relevant experience to gain " +
-                "- Networking or learning opportunities",
-                resumeJsonStr, jobDescription != null ? jobDescription : "general career improvement");
+                "You are an expert career coach with deep knowledge of hiring practices. Analyze this resume and provide personalized improvement suggestions.\n\n" +
+                "CANDIDATE'S RESUME DATA:\n%s\n\n" +
+                "TARGET POSITION/INDUSTRY:\n%s\n\n" +
+                "ANALYSIS INSTRUCTIONS:\n" +
+                "1. Consider the candidate's current experience level and career stage\n" +
+                "2. Identify specific gaps between their profile and the target position\n" +
+                "3. Suggest concrete, actionable improvements they can implement\n" +
+                "4. Focus on both content and presentation enhancements\n" +
+                "5. Consider industry-specific requirements and trends\n\n" +
+                "SUGGESTION CATEGORIES TO COVER:\n" +
+                "- Skills & Technical Competencies: Missing skills, certifications, or tools\n" +
+                "- Experience Presentation: How to better highlight relevant experience\n" +
+                "- Achievement Quantification: Specific metrics or results to add\n" +
+                "- Industry Alignment: Terminology, keywords, or focus areas to emphasize\n" +
+                "- Professional Development: Learning opportunities or next steps\n\n" +
+                "Provide 4-6 specific, personalized suggestions that this candidate can realistically implement. " +
+                "Each suggestion should be practical and directly tied to improving their competitiveness for this type of role.\n\n" +
+                "Return ONLY a JSON object in this exact format: {\"suggestions\": [\"suggestion1\", \"suggestion2\", \"suggestion3\", \"suggestion4\"]} " +
+                "No other text or formatting.",
+                resumeJsonStr, jobFocus);
         } catch (Exception e) {
             throw new RuntimeException("Failed to serialize resume JSON", e);
         }
     }
 
     private String buildTranslatePrompt(String resumeText, String targetLanguage) {
-        String targetLangFull = "en".equals(targetLanguage) ? "English" : "Chinese";
+        String targetLangFull = getLanguageName(targetLanguage);
         return String.format(
-            "Translate the following resume into %s, preserving dates, numbers, and technology names. " +
-            "Output Markdown format. Keep the structure and formatting intact.\n\n" +
-            "Resume text:\n%s",
+            "Translate the following resume into %s. IMPORTANT RULES:\n" +
+            "1. ONLY translate the text content - DO NOT change the format, structure, or layout\n" +
+            "2. Preserve ALL Markdown formatting exactly as it is (headers, bullets, bold, italic, etc.)\n" +
+            "3. Keep dates, numbers, company names, and technology names unchanged\n" +
+            "4. Maintain the exact same line breaks and spacing\n" +
+            "5. Do not add any additional content or explanations\n" +
+            "6. Output ONLY the translated resume with original formatting\n" +
+            "7. Use native speakers' natural expressions and professional terminology\n\n" +
+            "Resume to translate:\n%s",
             targetLangFull, resumeText);
+    }
+
+    private String getLanguageName(String languageCode) {
+        switch (languageCode.toLowerCase()) {
+            case "en": return "English";
+            case "zh": return "Chinese (Simplified)";
+            case "es": return "Spanish";
+            case "fr": return "French";
+            case "de": return "German";
+            case "ja": return "Japanese";
+            case "ko": return "Korean";
+            default: return "English"; // fallback
+        }
     }
 
     public boolean isServiceAvailable() {

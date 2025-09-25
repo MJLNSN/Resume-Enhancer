@@ -8,6 +8,8 @@ public class AnalyzeRequest {
     
     private String jobDescription;
     
+    private String outputLanguage; // Target output language
+    
     @NotNull
     private String mode = "local"; // "local" or "gpt"
     
@@ -15,9 +17,10 @@ public class AnalyzeRequest {
 
     public AnalyzeRequest() {}
 
-    public AnalyzeRequest(Long resumeId, String jobDescription, String mode, Boolean forceRefresh) {
+    public AnalyzeRequest(Long resumeId, String jobDescription, String outputLanguage, String mode, Boolean forceRefresh) {
         this.resumeId = resumeId;
         this.jobDescription = jobDescription;
+        this.outputLanguage = outputLanguage;
         this.mode = mode;
         this.forceRefresh = forceRefresh;
     }
@@ -28,6 +31,9 @@ public class AnalyzeRequest {
 
     public String getJobDescription() { return jobDescription; }
     public void setJobDescription(String jobDescription) { this.jobDescription = jobDescription; }
+
+    public String getOutputLanguage() { return outputLanguage; }
+    public void setOutputLanguage(String outputLanguage) { this.outputLanguage = outputLanguage; }
 
     public String getMode() { return mode; }
     public void setMode(String mode) { this.mode = mode; }

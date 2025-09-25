@@ -13,6 +13,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping
@@ -20,6 +21,15 @@ public class AnalysisController {
 
     @Autowired
     private EnhancedResumeService enhancedResumeService;
+
+    @GetMapping("/health")
+    public ResponseEntity<Map<String, Object>> health() {
+        return ResponseEntity.ok(Map.of(
+            "status", "UP",
+            "service", "Resume Enhancer Backend",
+            "timestamp", System.currentTimeMillis()
+        ));
+    }
 
     @PostMapping("/analyze")
     public ResponseEntity<EnhancedResumeResponse> analyzeResume(
@@ -82,6 +92,26 @@ public class AnalysisController {
             return ResponseEntity.ok(versions);
         } catch (Exception e) {
             return ResponseEntity.badRequest().build();
+        }
+    }
+
+    @PostMapping("/suggestions")
+    public ResponseEntity<?> generateSuggestions(
+            @RequestBody Map<String, Object> request,
+            @AuthenticationPrincipal UserPrincipal currentUser) {
+        try {
+            Long resumeId = Long.valueOf(request.get("resumeId").toString());
+            String jobDescription = (String) request.get("jobDescription");
+            String mode = (String) request.getOrDefault("mode", "local");
+            
+            List<String> suggestions = enhancedResumeService.generateSuggestions(resumeId, jobDescription, mode, currentUser.getId());
+            return ResponseEntity.ok(Map.of("suggestions", suggestions));
+        } catch (Exception e) {
+            System.err.println("Suggestions error: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.badRequest()
+                .header("Content-Type", "application/json")
+                .body("{\"error\": \"" + e.getMessage() + "\"}");
         }
     }
 }

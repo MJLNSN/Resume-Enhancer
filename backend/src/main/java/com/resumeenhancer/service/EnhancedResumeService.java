@@ -41,14 +41,52 @@ public class EnhancedResumeService {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public EnhancedResumeResponse enhanceResume(EnhanceRequest request, Long userId) {
-        // Convert EnhanceRequest to AnalyzeRequest
-        AnalyzeRequest analyzeRequest = new AnalyzeRequest();
-        analyzeRequest.setResumeId(request.getResumeId());
-        analyzeRequest.setJobDescription(request.getJobDescription());
-        analyzeRequest.setMode(request.getMode());
-        analyzeRequest.setForceRefresh(true); // Always force refresh for enhance requests
-        
-        return analyzeResume(analyzeRequest, userId);
+        Resume resume = resumeRepository.findByIdAndUserId(request.getResumeId(), userId)
+                .orElseThrow(() -> new RuntimeException("Resume not found"));
+
+        if (resume.getRawText() == null || resume.getRawText().trim().isEmpty()) {
+            throw new RuntimeException("Resume text is not available yet");
+        }
+
+        try {
+            String enhancedText;
+
+            if ("gpt".equals(request.getMode()) && gptService.isServiceAvailable()) {
+                // Check usage limits
+                if (usageTrackingService != null && !usageTrackingService.canUseGptService(userId)) {
+                    throw new RuntimeException("Daily GPT usage limit exceeded. Please try again tomorrow or use local mode.");
+                }
+                
+                // Use GPT for enhancement - 将简历改成模板格式，支持输出语言
+                enhancedText = gptService.enhanceResume(resume.getRawText(), request.getJobDescription(), request.getOutputLanguage());
+                
+                // Track usage
+                if (usageTrackingService != null) {
+                    usageTrackingService.trackGptUsage(userId);
+                }
+            } else {
+                // Use local template enhancement
+                enhancedText = enhanceWithLocalTemplate(resume.getRawText(), request.getJobDescription());
+            }
+            
+            // Track enhancement usage regardless of mode
+            if (usageTrackingService != null) {
+                usageTrackingService.trackEnhancementUsage(userId);
+            }
+
+            // Save enhanced resume
+            EnhancedResume enhanced = new EnhancedResume();
+            enhanced.setResume(resume);
+            enhanced.setEnhancedText(enhancedText);
+            enhanced.setLanguage(EnhancedResume.Language.ORIGINAL);
+            enhanced.setEnhancementType("rewrite");
+            
+            EnhancedResume saved = enhancedResumeRepository.save(enhanced);
+            return convertToDto(saved);
+
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to enhance resume: " + e.getMessage(), e);
+        }
     }
 
     public EnhancedResumeResponse analyzeResume(AnalyzeRequest request, Long userId) {
@@ -81,7 +119,7 @@ public class EnhancedResumeService {
                 }
                 
                 // Use GPT for enhancement
-                enhancedText = gptService.enhanceResume(resume.getRawText(), request.getJobDescription());
+                enhancedText = gptService.enhanceResume(resume.getRawText(), request.getJobDescription(), request.getOutputLanguage());
                 
                 // Generate suggestions if parsed JSON is available
                 if (resume.getParsedJson() != null) {
@@ -118,6 +156,44 @@ public class EnhancedResumeService {
 
         } catch (Exception e) {
             throw new RuntimeException("Failed to analyze resume: " + e.getMessage(), e);
+        }
+    }
+
+    public List<String> generateSuggestions(Long resumeId, String jobDescription, String mode, Long userId) {
+        Resume resume = resumeRepository.findByIdAndUserId(resumeId, userId)
+                .orElseThrow(() -> new RuntimeException("Resume not found"));
+
+        if (resume.getParsedJson() == null) {
+            throw new RuntimeException("Resume has not been parsed yet");
+        }
+
+        try {
+            if ("gpt".equals(mode) && gptService.isServiceAvailable()) {
+                // Check usage limits
+                if (usageTrackingService != null && !usageTrackingService.canUseGptService(userId)) {
+                    throw new RuntimeException("Daily GPT usage limit exceeded. Please try again tomorrow or use local mode.");
+                }
+                
+                List<String> suggestions = gptService.generateSuggestions(resume.getParsedJson(), jobDescription);
+                
+                // Track usage
+                if (usageTrackingService != null) {
+                    usageTrackingService.trackGptUsage(userId);
+                }
+                
+                return suggestions;
+            } else {
+                // Return local suggestions
+                return List.of(
+                    "Add more quantifiable achievements with specific numbers and percentages",
+                    "Include relevant technical skills and certifications for your target role",
+                    "Tailor your experience descriptions to match the job requirements",
+                    "Consider adding a professional summary section at the top",
+                    "Ensure consistent formatting and remove any typos or grammatical errors"
+                );
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to generate suggestions: " + e.getMessage(), e);
         }
     }
 
